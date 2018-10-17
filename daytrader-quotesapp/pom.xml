@@ -53,9 +53,7 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>	  
-<!-- 
-		- Upgraded to Log4j2
--->	
+
 		<dependency>
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-api</artifactId>
