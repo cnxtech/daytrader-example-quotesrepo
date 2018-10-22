@@ -1,0 +1,14 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: daytrader-quotes
+  annotations:
+    kubernetes.io/ingress.allow-http: "false"
+spec:
+  tls:
+  - hosts:
+    - quotes.daytrader.geronimo.apache.org
+    secretName: daytrader-quotes
+  backend:
+    serviceName: daytrader-quotes
+    servicePort: 443 
