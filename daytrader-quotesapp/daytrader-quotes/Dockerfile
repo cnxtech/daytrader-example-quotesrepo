@@ -54,13 +54,9 @@ ADD ${JKS_FILE} $DAYTRADER_TRUSTSTORE_LOCATION
 RUN chmod 666 $DAYTRADER_TRUSTSTORE_LOCATION
 
 # Add the application's war to the container
-ENTRYPOINT ["java", \
- "-Djava.security.egd=file:/dev/./urandom  -Djavax.net.debug=all -Djavax.net.ssl.trustStore=$DAYTRADER_TRUSTSTORE_LOCATION -Djavax.net.ssl.trustStorePassword=$DAYTRADER_TRUSTSTORE_PASSWORD", \
- "-jar", "/app.war"]
-
 ARG WAR_FILE=target/$DAYTRADER_WAR_ARTIFACTID-$DAYTRADER_APP_VERSION.war
 ADD ${WAR_FILE} app.war
 
-ENV JAVA_OPTS="-Djavax.net.debug=all -Djavax.net.ssl.trustStore=/var/ssl/daytrader/truststore.jks -Djavax.net.ssl.trustStorePassword=password"
+ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=/var/ssl/daytrader/truststore.jks -Djavax.net.ssl.trustStorePassword=password"
 
 ENTRYPOINT exec java $JAVA_OPTS -jar app.war
