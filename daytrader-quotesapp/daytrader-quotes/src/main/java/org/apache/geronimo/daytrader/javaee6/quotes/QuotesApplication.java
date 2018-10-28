@@ -17,6 +17,8 @@
 
 package org.apache.geronimo.daytrader.javaee6.quotes;
 
+import java.util.Arrays;
+
 import javax.sql.DataSource;
 
 import org.apache.catalina.Context;
@@ -26,6 +28,7 @@ import org.apache.tomcat.util.descriptor.web.ContextResource;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.context.embedded.tomcat.TomcatContextCustomizer;
 import org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainer;
 import org.springframework.boot.context.embedded.tomcat.TomcatEmbeddedServletContainerFactory;
 import org.springframework.boot.web.servlet.ServletComponentScan;
@@ -57,17 +60,20 @@ public class QuotesApplication extends SpringBootServletInitializer {
 	}
 
 	@Bean
-	public TomcatEmbeddedServletContainerFactory tomcatFactory() {
-		return new TomcatEmbeddedServletContainerFactory() {
-
+	public TomcatEmbeddedServletContainerFactory tomcatFactory() 
+	{
+		TomcatEmbeddedServletContainerFactory factory = new TomcatEmbeddedServletContainerFactory() 
+		{
 			@Override
-			protected TomcatEmbeddedServletContainer getTomcatEmbeddedServletContainer(Tomcat tomcat) {
+			protected TomcatEmbeddedServletContainer getTomcatEmbeddedServletContainer(Tomcat tomcat) 
+			{
 				tomcat.enableNaming();
 				return super.getTomcatEmbeddedServletContainer(tomcat);
 			}
 
 			@Override
-			protected void postProcessContext(Context context) {
+			protected void postProcessContext(Context context) 
+			{
 				//
 				// Quotes Data Source
 				//
@@ -85,8 +91,9 @@ public class QuotesApplication extends SpringBootServletInitializer {
 				quotesDataSource.setProperty("maxWait", "10000");
 				context.getNamingResources().addResource(quotesDataSource);
 			}
-			
 		};
+		
+	    return factory;
 	}
 }
 
