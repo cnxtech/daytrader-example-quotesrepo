@@ -213,7 +213,7 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
 
 	    1.  $ cd daytrader-quotesapp\daytrader-quotes\env\external\k8s
     
-		2.	$ kubectl apply -f quotes-deployment.yaml 
+		2.	$ kubectl apply -f daytrader-quotes-deployment.yaml 
 		
 		3.  $ kubectl get pods -o wide
 		
@@ -234,7 +234,7 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
         
         To create the service,
 
-            1.  $ apply -f quotes-service.yaml
+            1.  $ kubectl apply -f daytrader-quotes-service.yaml
         
             2.  $ kubectl get services
         
@@ -257,7 +257,7 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
         
                 # Note the NAME of the quotes pod; you'll need it to execute the next command
         
-            2.  $ kubectl exec <POD_NAME> -it - curl -k https://<CLUSTER-IP>/health
+            2.  $ kubectl exec <POD_NAME> -it -- curl -k https://<CLUSTER-IP>/health
             
                 {"status":"UP"}
   
