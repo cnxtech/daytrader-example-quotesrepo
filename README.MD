@@ -196,7 +196,7 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
 	    2.	$ mvn -Pcd clean install
 		
 	
-#### Configure kubectl to access the right cluster
+#### Configure kubectl to access the cluster
     
         1.  For Minikube,  
         
@@ -209,22 +209,27 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
                 a.  $ kubectl config use-context eks
             
             
-#### Create the deployment to run the application
+#### Create a Deployment to run the application in one or more pods
+
+    Notes: A Deployment also creates the specified number of PODs and a ReplicaSet to manage the lifecycle of the pods
 
 	    1.  $ cd daytrader-quotesapp\daytrader-quotes\env\external\k8s
     
 		2.	$ kubectl apply -f deployment.yaml 
 		
-		3.  $ kubectl get pods -o wide
+		3.  $ kubectl get pods
 		
-		    ## Take note of the POD_NAME, and wait until the STATUS is Running. 
+    		NAME                                READY   STATUS    RESTARTS   AGE  
+            daytrader-quotes-87b5658f4-889gp    1/1     Running   0          6m   
+		
+		    ## Record the NAME of the pod, and wait until the STATUS is Running and all pods are READY (e.g. 1/1, 2/2, or 3/3)
               
         4.  $ kubectl logs <POD_NAME>
         
             ##  You should see : Tomcat started on port(s): 4443 (https). If not see Troubleshooting
             
         
-#### Expose the application to clients through a Service resource
+#### Create a Service to load balance requests across the Pods
 
 	Before creating the service it is important to understand the rationale for creating them. Remember that pods are ephemeral. If 
 	a pod stops, then Kubernetes will create an identical one, but it will have a different IP. For that reason, clients should not 
@@ -291,22 +296,6 @@ The Quotes Database(highlighted in the green box) stores stock quotes.
 	    		c. See also
 						  
 	    		   - https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/ 
-
-	    		   
-### Secrets
-			                 
-	    1.	Check and verify your certificate and key. This can be useful before applying them to your server. 
-
-		        a.	$ openssl x509 -in tls.crt -text  ## Check the certificate and its information (signing authority, expiration date, etc.)
-
-        		b.	$ openssl rsa -in tls.key -check  ## Check the SSL key and verify the consistency
-    
-    	2. 	Verify the certificate and key match by comparing their checksums for equality
-
-	        	a.	$ openssl x509 -noout -modulus -in tls.crt | openssl md5
-        
-        		b.	$ openssl rsa -noout -modulus -in tls.key | openssl md5      
-        
         
 
 ### Dashboard
