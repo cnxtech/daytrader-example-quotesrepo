@@ -1,370 +1,375 @@
 
-# Quotes Microservice
+# Accounts Microservice
 
-	The APIs to the quotes business functions
+The APIs to the accounts business operations
 
 
-
-## Current State Architecture
-
-DayTrader is multi-tier application built around the paradigm of an online stock trading system. Example business functions include
+## Monolithic Architecture
+DayTrader is multi-tier application is built around the paradigm of an online stock trading system. Example business operations include
 login, register, view portfolio, lookup stock quotes, and buy or sell stock. DayTrader was originally developed by IBM and donated 
 to the Apache Geronimo community in the 2005 timeframe. The DayTrader architecture is representitive of monolithic applications that 
 many businesses are still using. For that reason, we selected it to clarify the techniques for refactoring a monolith to microservices. 
-For the original monolithic architecture, see http://geronimo.apache.org/GMOxDOC30/daytrader-a-more-complex-application.html. 
+For the monolithic architecture, see [daytrader - a more complex application](http://geronimo.apache.org/GMOxDOC30/daytrader-a-more-complex-application.html). 
 
 
 
-## Target State Architecture
+## Microservices Architecture
+
+Consider the following microservices architecture diagram. In this architecture, the Web is responsible for the UI to the DayTrader business operations. It accepts 
+incoming HTTPS requests from the browser and delegates them to the [Gateway Microservice](https://github.com/jpmorganchase/daytrader-example-gatewayrepo/). The 
+Gateway Microservice in turn redirects the request to the ([Accounts Microservice](https://github.com/jpmorganchase/daytrader-example-accountsrepo/), 
+[Portfolios Microservice](https://github.com/jpmorganchase/daytrader-example-portfoliosrepo/), or 
+[Quotes Microservice](https://github.com/jpmorganchase/daytrader-example-quotesrepo/); which implements that business operation. All of these componenets are Spring Boot applications.
 
 ![Target-State-Architecture](images/Target-State-Architecture.JPG)
 
-
-
-### Quotes Application
-
-The Quotes Application (highlighted in the green box) is a Spring Boot Application responsible for providing up-to-date stock quotes.
-
-
-
-#### Static Viewpoint
-
-![Static-Viewpoint](images/Static-Viewpoint.JPG)
-
-
-
-#### Dynamic Viewpoint
-
-![Dynamic-Viewpoint](images/Dynamic-Viewpoint.JPG)
-
-
-
-#### Participant and Responsibilities
-
-![Participant-Responsibilities](images/Participant-Responsibilities.JPG)
-
-
-
-### Quotes Database
-
-The Quotes Database(highlighted in the green box) stores stock quotes. 
-
-![Database-Schema](images/Database-Schema.JPG)
-
+This README shows how to put Quotes into a Docker Image and how to deploy that Docker Image to Kubernetes. 
 
 
 
 ## Prerequisites
 
-### Installation
+1.  [Install Java 8](http://www.oracle.com/technetwork/java/javase/downloads/index.html)
 
+2.  [Install Maven 3.3.9+](https://maven.apache.org/download.cgi)
 
-#### For building Docker images and pushing them to a Docker registry
-
-		1.	Inatall Java Development Kit (64 bit) 1.8+
-		2.	Install Apache Maven 3.3.9+
-		3.  Create DockerHub Account (https://hub.docker.com/)
-		4.  Install Docker (https://www.docker.com/get-docker)
-		
-#### For deploying and managing applications on Kubernetes
-
-		1.  Install kubectl (https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-
-#### For running Kubernetes on Minikube 
-
-		1.  Install Minikube (https://kubernetes.io/docs/setup/minikube/)
-
-#### For running Kubernetes on Amazon EKS
-
-		1.  Create AWS Account (https://aws.amazon.com/premiumsupport/knowledge-center/create-and-activate-aws-account/)
-		2.  Install AWS IAM Authenticator (https://docs.aws.amazon.com/eks/latest/userguide/configure-kubectl.html)
-		2.  Install AWS Command Line Interface (https://docs.aws.amazon.com/cli/latest/userguide/installing.html)
-		3.  Install eksctl (https://github.com/weaveworks/eksctl)
-
-
-### Configuration
-
-#### Maven
-
-        The following settings are required for Maven to push Docker images to you DockerHub account
-
-        1.  Change the following property in daytrader-quotes/pom.xml to your DockerHub user name:
+3.  [Install Docker](https://www.docker.com/get-docker)
     
-            <docker.image.prefix>${user.name}</docker.image.prefix>
-               
-        3.  Change the following key-value in daytrader-quotes/env/external/k8s/quotes-deployment.yaml to your DockerHub user name
+4.  [Create DockerHub Account](https://hub.docker.com/)
+
+
+
+## Configuration
+
+Maven must be able to authenticate to your DockerHub account so it can push Docker images
+
+1.  In `daytrader-accounts/pom.xml` change the ${user.name} to your DockerHub user name:
+
+    ```xml
+    <docker.image.prefix>${user.name}</docker.image.prefix>
+    ``` 
+
+2.  In `daytrader-accounts/env/external/k8s/accounts-deployment.yaml`, change the image to your DockerHub username
+
+    ```yaml
+    image: YOUR_DOCKERHUB_USERNAME/daytrader-accounts:4.0.18
+    ```
+
+3.  In `daytrader-accounts/pom.xml`, you don't have to change the <tag>, but if you do, change the above version too.
         
-            image: YOUR_DOCKERHUB_USERNAME/daytrader-gateway:4.0.18
-        
-        4.  The following property in daytrader-quotes/pom.xml is also worth noting. You do not have to change it, but if you do, change the above key-value accordingly.
-        
-    		<tag>4.0.18</tag>
-        
-        5.  Add the following settings to your Maven ~/.m2/settings.xml so Maven can push images to your DockerHub account
+    ```xml
+    <tag>4.0.18</tag>
+    ```
 
-                <servers>
-                  <server>
-                        <id>docker.io</id>
-                        <username>YOUR_DOCKERHUB_USERNAME</username>
-                        <password>YOUR_DOCKERHUB_PASSWORD</password>
-                    </server>
-                </servers>       
-   
-        
+4.  In `~/.m2/settings.xml`, add the following so Maven can push images to your DockerHub account
 
-#### AWS CLI
+    ```xml
+    <servers>
+        <server>
+            <id>docker.io</id>
+            <username>YOUR_DOCKERHUB_USERNAME</username>
+            <password>YOUR_DOCKERHUB_PASSWORD</password>
+        </server>
+    </servers> 
+    ```
 
-        1.  Configuring the AWS CLI (https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html)
+## Setup
+You will need a cluster to run the application. If you already have a cluster with the NGINX Ingress Controller installed then feel free to use it. If not, we have provided instructions to help you setup a cluster on Minikube, Amazon EKS, Google Kubernetes Engine, and Azure Kubernetes Service. We have also tested the application on those platforms. For additional information see [Picking the right Solution](https://kubernetes.io/docs/setup/pick-right-solution/).  
 
-                
-                
-#### Kubernetes Cluster
+1.  [Setup on Minikube](docs/SETUP-ON-MINIKUBE.MD)
 
-        1.  You must have at least one Kubernetes cluster.
+2.  [Setup on Amazon EKS](docs/SETUP-ON-EKS.MD)
 
-                a.  For Minikube,
-        
-                    $ minikube --memory 8192 --cpus 2 start
-            
-                    ## Minikube comes with a cluster. It was running out of memory so increased to 8GB of RAM. You may be able to run with less RAM, but that setting worked well.
-            
-                b.  For EKS, 
-        
-                    $ eksctl create cluster --name=user116-eks-cluster --region=us-east-1
-            
-                    ## This command creates an EKS cluster named user116-eks-cluster in the us-east-1 region. For additional details on parameters, see https://github.com/weaveworks/eksctl
-            
-        2.  If you installed Minikube and Amazon EKS, then you will have two contexts in your ~/.kube/config file. One of those contexts is for accessing the Minikube
-            cluster; the other context is for accessing the EKS cluster. You must set the context to the cluster before running kubectl commands. Set the context once
-            then all subsequent kubectl commands will be directed to that cluster. Set it again and the kubectl commands will go to the other cluster. To do that,
-                  
-                a.  For Minikube, 
-                
-                    $ kubectl config use-context minikube
-                        
-                b.  For Amazon EKS, 
-                
-                    $ kubectl config use-context user116-eks-cluster  ## Use the name of your Amazon EKS cluster
+3.  [Setup on Google GKE](docs/SETUP-ON-GKE.MD)
 
-        3.  Now you can verify your cluster by running some kubectl commands
-        
-                a.  For Minikube
-        
-                    $ kubectl config use-context minikube
-                    
-                    Switched to context "minikube".
-
-                    $ kubectl cluster-info
-                    
-                    Kubernetes master is running at https://192.168.99.100:8443
-                    KubeDNS is running at https://192.168.99.100:8443/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
-                        
-                b.  For Amazon EKS,
-        
-                    $ kubectl config use-context user116-eks-cluster  ## Use the name of your Amazon EKS cluster
-                    
-                    Switched to context "user116-eks-cluster".
-            
-                    $ kubectl kubectl cluster-info
-                    
-                    Kubernetes master is running at https://8D36DB7CBD2E3394FF0843CEA0C0A266.sk1.us-east-1.eks.amazonaws.com
-
-   
-
-## Delivery Pipeline
-
-### Build Automation
-
-		1.	cd daytrader-quotesapp
-		2.	mvn clean install
+3.  [Setup on Azure AKS](docs/SETUP-ON-AKS.MD)
 
 
-### Continuous Integration
 
-		1.	cd daytrader-quotesapp
-		2.	mvn -Pci clean install
+## Build, Release, and Run
+
+You can run the application on Spring Boot or on the Kubernetes Cluser.
+
+1.  [Run on Spring Boot](docs/RUN-ON-SPRING-BOOT.MD)
+
+2.  [Run on Kubernetes Cluster](docs/RUN-ON-SPRING-BOOT.MD)
+
+**Note** Quotes is 100% portable across the Kubernetes Platforms we tested.
 
 
-### Continuous Delivery
-
-    Many of these manual steps can be automated by maven at a later date.
     
+## Steps to Generate the Docker Image
 
-#### Create the Docker image and push it to DockerHub
-
-        1.	$ cd daytrader-quotesapp
-	    2.	$ mvn -Pcd clean install
-		
-	
-#### Configure kubectl to access the cluster
+These steps were very straightforward and easy to perform.
+ 
+### Create the Dockerfile
     
-        1.  For Minikube,  
-        
-                a.  $ minikube --memory 8192 --cpus 2 start
-        
-                b.  $ kubectl config use-context minikube   
-        
-        2.  For EKS, 
-        
-                a.  $ kubectl config use-context eks
-            
-            
-#### Create a Deployment to run the application in one or more pods
+The `Dockerfile` is where you define all the commands to setup the environment and start Quotes in the container.
 
-    Notes: A Deployment also creates the specified number of PODs and a ReplicaSet to manage the lifecycle of the pods
+```yaml
+FROM openjdk:8-jdk
+VOLUME /tmp
+MAINTAINER Donald Vines <donald_vines@hotmail.com>
+# Set ssl variables
+ENV DAYTRADER_KEYSTORE_FILENAME=/var/ssl/daytrader/keystore.jks
+ENV DAYTRADER_KEYSTORE_PASSWORD=password
+ENV DAYTRADER_TRUSTSTORE_LOCATION=/var/ssl/daytrader/truststore.jks
+ENV DAYTRADER_TRUSTSTORE_PASSWORD=password
+# Set app variables
+ENV DAYTRADER_APP_VERSION=4.0.0
+ENV DAYTRADER_APP_ARTIFACTID=daytrader-accountsapp
+ENV DAYTRADER_WAR_ARTIFACTID=daytrader-accounts
+# Set database variables
+ENV DAYTRADER_DATABASE_DRIVER=org.apache.derby.jdbc.EmbeddedDriver
+ENV DAYTRADER_DATABASE_URL='jdbc:derby:tradesdb;create=true'
+ENV DAYTRADER_DATABASE_USERNAME=xxx
+ENV DAYTRADER_DATABASE_PASSWORD=xxx
+# Set tomcat variables
+ENV SERVER_PORT=1443
+ENV SERVER_PORT_HTTPS=1443
+# Make port visible
+EXPOSE 1443
+# Set service routes
+ENV DAYTRADER_ACCOUNTS_SERVICE=https://daytrader-accounts
+ENV DAYTRADER_GATEWAY_SERVICE=https://daytrader-gateway
+ENV DAYTRADER_PORTFOLIOS_SERVICE=https://daytrader-portfolios
+ENV DAYTRADER_QUOTES_SERVICE=https://daytrader-quotes
+# Set logging variables
+ENV DAYTRADER_LOG_FILENAME=/var/log/daytrader/$DAYTRADER_APP_ARTIFACTID-$DAYTRADER_APP_VERSION.log
+ENV DAYTRADER_LOG_LEVEL=TRACE
+ENV DAYTRADER_LOG_APPENDER=ConsoleAppender
+# Create the log folder
+RUN mkdir -p -m 0777 /var/log/daytrader
+# Create the log file and set permissions
+RUN touch $DAYTRADER_LOG_FILENAME
+RUN chmod 666 $DAYTRADER_LOG_FILENAME
+# Create the ssl folder
+RUN mkdir -p -m 0777 /var/ssl/daytrader
+# Add the truststore to the container and set permissions
+ARG JKS_FILE=target/$DAYTRADER_WAR_ARTIFACTID-$DAYTRADER_APP_VERSION/WEB-INF/classes/truststore.jks
+ADD ${JKS_FILE} $DAYTRADER_TRUSTSTORE_LOCATION
+RUN chmod 666 $DAYTRADER_TRUSTSTORE_LOCATION
+# Add the application's war to the container
+ARG WAR_FILE=target/$DAYTRADER_WAR_ARTIFACTID-$DAYTRADER_APP_VERSION.war
+ADD ${WAR_FILE} app.war
+ENV JAVA_OPTS="-Djavax.net.ssl.trustStore=/var/ssl/daytrader/truststore.jks -Djavax.net.ssl.trustStorePassword=password"
+ENTRYPOINT exec java $JAVA_OPTS -jar app.war
+```
 
-	    1.  $ cd daytrader-quotesapp\daytrader-quotes\env\external\k8s
+### Add Dockerfile Maven Plugin
+
+In `daytrader-accountsapp/daytrader-accounts/pom.xml`, add the [Dockerfile Maven Plugin](https://github.com/spotify/dockerfile-maven) and specify the DockerHub account. 
+        
+```xml
+<plugin>
+    <groupId>com.spotify</groupId>
+    <artifactId>dockerfile-maven-plugin</artifactId>
+    <version>${dockerfile-maven-version}</version>
+    <executions>
+        <execution>
+            <phase>package</phase>
+            <goals>
+                <goal>build</goal>    <!-- Builds the Docker image -->
+                <goal>push</goal>     <!-- Pushes the Docker image -->
+            </goals>
+        </execution>
+    </executions>
+    <configuration>
+        <repository>${docker.image.prefix}/${project.artifactId}</repository>
+        <tag>4.0.18</tag>
+        <buildArgs>
+            <JAR_FILE>target/${project.artifactId}-${project.version}.war</JAR_FILE>
+        </buildArgs>
+        <useMavenSettingsForAuth>true</useMavenSettingsForAuth>   <!-- Authenticates to your DockerHub account -->
+    </configuration>
+</plugin>
+```
+
+### Build and Push the Docker image
+
+With the `Dockerfile` and the `Dockerfile Maven Plugin` in place, we can use Maven to build and push the Docker image to DockerHub.
+
+1.  `$ cd daytrader-accountsapp`
+
+2.  `$ mvn -Pcd clean install`
+
+This command creates an image with the version <tag> you specified in the configuration. You can update this <tag> for a rolling update.
     
-		2.	$ kubectl apply -f deployment.yaml 
-		
-		3.  $ kubectl get pods
-		
-    		NAME                                READY   STATUS    RESTARTS   AGE  
-            daytrader-quotes-87b5658f4-889gp    1/1     Running   0          6m   
-		
-		    ## Record the NAME of the pod, and wait until the STATUS is Running and all pods are READY (e.g. 1/1, 2/2, or 3/3)
+    
+## Steps to Deploy the Docker Image to a Kubernetes Cluster
+
+Deployment to Kubernetes required a number of manual steps. Some of these steps were to specify the configuration of the resources; others were to create the resources; and still others were used to verify the deployment. You only have to specify the configuration once; after that you can use it to create the resources. The creation of resources has be done whenever you do a deployment. As such they should be automated via Maven. The other other steps to verify the deployment should only used by developers troubleshooting a problem. Before automating though it is important to first identify the manual steps which is what we do in this section. 
+
+**Notes** 
+
+1.  All configuration files are located in this folder: `$ cd daytrader-accountsapp/daytrader-accounts/env/external/k8s`
+
+2.  All configuration files were completely portable across the Kubernetes platforms that we tested.
+
+3.  All `kubectl` commands were also completely portable across the Kubernetes platforms that we tested. 
+
+This means you write configuration files once and run them on any platform. This is great news for DevOps!
+
+### Create the Deployment for our Docker Image
+
+#### Use `yaml` to specify the deployment configuration
+
+The `deployment.yaml` is where you specify the Docker Image for your application along with other specs
+    
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: daytrader-accounts
+  name: daytrader-accounts
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: daytrader-accounts
+  template:
+    metadata:
+      labels:
+        app: daytrader-accounts
+    spec:
+      containers:
+      - name: daytrader-accounts
+        image: dhvines/daytrader-accounts:4.0.18
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 1443
+          protocol: TCP
+        readinessProbe:  
+          httpGet:
+            path: /health
+            scheme: HTTPS
+            port: 1443
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+        livenessProbe:  
+          httpGet:
+            path: /health
+            scheme: HTTPS
+            port: 1443
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 4
+        env:
+        - name: ACCOUNTS_SERVICE_ROUTE
+          value: https://daytrader-accounts
+        - name: GATEWAY_SERVICE_ROUTE
+          value: https://daytrader-gateway
+        - name: PORTFOLIOS_SERVICE_ROUTE
+          value: https://daytrader-portfolios
+        - name: QUOTES_SERVICE_ROUTE
+          value: https://daytrader-quotes
+        - name: GET_HOSTS_FROM
+          value: dns
+```
+#### Use `kubectl apply -f` to create the deloyment resource
+
+1.  `$ kubectl apply -f deployment.yaml`
+
+    This command creates a Deployment resource, which creates the ReplicaSet, which then creates the Pods
+    
+2.  `$ kubectl get pods`
+    
+    NAME | READY | STATUS | RESTARTS | AGE
+    ---- | ----- | ------ | -------- | ---
+    daytrader-accounts-xxxxxxxxx-xxxxx | 1/1 | Running | 0 | 6m
+    
+    Wait until you see READY `1/1` and STATUS `Running`
               
-        4.  $ kubectl logs <POD_NAME>
+3.  Review the pods (application) logs
         
-            ##  You should see : Tomcat started on port(s): 4443 (https). If not see Troubleshooting
+    `$ kubectl logs daytrader-accounts-xxxxxxxxx-xxxxx -f`
+    
+    You should see `Tomcat started on port(s): 1443 (https)`
+    
+#### Use `kubectl port-forward` to test the connection
+        
+1.  `$ kubectl port-forward daytrader-accounts-xxxxxxxxx-xxxxx 8888:1443`
+    
+    This command forwards local port 8888 to port 1443 of your pod
+       
+    You should see `Forwarding from 127.0.0.1:8888 -> 1443`
+       
+2.  `$ curl -k https://127.0.0.1:8888/health`
+
+    You should see `{"status":"UP"}` 
             
-        
-#### Create a Service to load balance requests across the Pods
+### Create the Service for our Pod
 
-	Before creating the service it is important to understand the rationale for creating them. Remember that pods are ephemeral. If 
-	a pod stops, then Kubernetes will create an identical one, but it will have a different IP. For that reason, clients should not 
-	communicate with application's directly. Instead they should talk to applications via service. To create the service,
-        
-        1.  $ kubectl apply -f service.yaml
+The Service load balances requests across the Pods. Remember that the pods are ephemeral. So if one of them stops, the ReplicaSet will 
+create a replacement, but that Pod will have a different IP address. For that reason, clients should not communicate directly with the 
+application in a Pod. Instead clients should talk to applications via their service. 
+    
+#### Use `yaml` to specify the service configuration
+
+The `service.yaml` is where you specify the selector for the backend pods along with other specifications
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: daytrader-accounts
+  name: daytrader-accounts
+  namespace: default
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 1443
+  selector:
+    app: daytrader-accounts
+  sessionAffinity: None
+  type: ClusterIP
+```
+
+#### Use `kubectl apply -f` to create the service resource
+
+1.  `$ kubectl apply -f service.yaml`
            
-        2.  $ kubectl get services
+2.  `$ kubectl get services`
         
-            NAME            	TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)         AGE
-            daytrader-quotes	ClusterIP   10.100.17.24     <none>        443/TCP         3d
+    NAME | TYPE | CLUSTER-IP | EXTERNAL-IP | PORT(S) | AGE
+    ---- | ---- | ---------- | ----------- | ------- | ---
+    daytrader-accounts | ClusterIP | 10.100.17.24 | <none> | 443/TCP | 38s
        
-            ## Notes
-        
-            	a.	The above command creates a service resource. This resource listens on the CLUSTER IP and PORT. It is backed by endpoints 
-               	    to one or more pods. You can see the dnpoints buy doing kubectl get endpoints. When the service receives an HTTPS request, 
-               	    it selects one of the endpoints (pods) and forwards the HTTPS request to the pod. The application running inside the pod 
-               	    handles the request and returns an HTTPS response.
-            	
-              	b.	See also https://kubernetes.io/docs/concepts/services-networking/service/      
+    The above command creates a service resource. This resource listens on the CLUSTER IP and PORT. It is backed by endpoints 
+    to one or more pods. You can see the enpoints buy doing `kubectl get endpoints`. When the service receives an HTTPS request,
+    it selects one of the endpoints (pods) and forwards the HTTPS request to the pod. The application running inside the pod 
+    handles the request and returns an HTTPS response.
+            
+    See also [Kubernetes Concepts - Services, Load Balancing, and Networking](https://kubernetes.io/docs/concepts/services-networking/service)
 
-
-
-                            
-## Troubleshooting
-
-
-### Pods
-        
-        1.	Retrieve the pods (application) logs
-    
-	           	a.	$ kubectl logs {POD_NAME} -f      ## The -f option tails the logs
-               
-
-        2.  Access the pod (application) through the port forwarder
-        
-	            a.	$ kubectl port-forward <POD_NAME> 8888:4443  ## This command forwards local port 8888 to port 4443 of your pod
-       
-        	    	Forwarding from 127.0.0.1:8888 -> 4443
-       
-	            b.	$ curl -k https://127.0.0.1:8888/health
-
-        	    	{"status":"UP"}      
-
-        	    	
-### Services
-        
-        1.	Access the service (application) through the API Server
+#### Use `kubectl proxy` to test the connection
                         
-	    		a.	$ kubectl proxy
-        
-	    			Starting to serve on 127.0.0.1:8001
-                
-	    			## Locates and authenticates to the API Server.
-
-    			b.	$ curl -k http://localhost:8001/api/v1/namespaces/default/services/https:daytrader-quotes:/proxy/health      
-		
-	    			{"status":"UP"}      		
-				
-	    		    ## The curl command sent the HTTP request (without any authentication headers) to the proxy that is running on your local machine.
-	    		    ## The proxy, then, sent an HTTPS request to the API server's identity by validating its certificate. Encryption, authentication,
-	    		    ## and server verification is handled by the proxy. This is the easiest way to connect to the API server. 
-			    
-	    		c. See also
-						  
-	    		   - https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/ 
-        
-
-### Dashboard
-
-        1.  Use kubernetes dashboard to manage and troubleshoot your cluster
-        
-            For Minikube
-        
-                a.  $ minikube dashboard
-        
-            For EKS
-        
-                a.  $ kubectl proxy
-                
-                b.  $ kubectl -n kube-system get secrets | grep admin
-               
-                      ## Copy the NAME of the admin-user-token
-                
-                c.  $ kubectl -n kube-system describe secrets <ADMIN_USER_TOKEN>
-                
-                    ## Copy the value of the authentication token
-                                    
-                d.  Open the following link in a browser to access the dashboard
-                
-                    http://localhost:8001/api/v1/namespaces/kube-system/services/https:kubernetes-dashboard:/proxy/
-                    
-                e.  You will see a login screen; choose Token and then enter the <AUTHENTICATION_TOKEN> from step c. 
-   
-            See also 
+1.  Start the proxy to locates and authenticate to the API Server.
     
-                a.  https://github.com/AcalephStorage/kubernetes-dashboard/blob/master/docs/user-guide/troubleshooting.md
-                b.  https://docs.aws.amazon.com/eks/latest/userguide/dashboard-tutorial.html
-
-
-
-## Swagger UI Documentation
-
-
-### Access Swagger UI via Spring Boot
-
-#### Local
-
-   		1. Make sure the application is running
-
-     			$ cd daytrader-quotesapp
-       			$ daytrader-quotes\env\external\bin\start_server
-
-   		2. 	Point you browser to https://localhost:4443/swagger-ui.html
-
-	    3.	Stop the application after reviewing the APIs
-
-      			$ cd daytrader-quotesapp	
-            	$ daytrader-quotes\env\external\bin\stop_server
-
-
-### Access Swagger UI via Kubernetes
-
-
-#### Pod
+    `$ kubectl proxy`
         
-        1.  Make sure the application is accessible via the Pod (port forwarding)
-                
-   		2. 	Point you browser to https://localhost:8888/swagger-ui.html
+    You should see `Starting to serve on 127.0.0.1:8001`
+            
+2.  If you get a port binding error then find the processId for that server and kill it 
 
-#### Service
-        
-        1.  Make sure the application is accessible via the Service (kubectl proxy)
+    `$ lsof -P | grep ':8001'`
+    `$ kill -9 processId`
 
-		2. 	Point you browser to http://localhost:8001/api/v1/namespaces/default/services/https:daytrader-quotes:/proxy/swagger-ui.html        		
-        		
+3.  Test the connection using the `curl` command
 
-         
+    `$ curl -k http://localhost:8001/api/v1/namespaces/default/services/https:daytrader-web:/proxy/health`
+    
+    You should see `{"status":"UP"}`
+    
+    The above curl command sends the HTTP request (without any authentication headers) to the proxy that is running on your local machine.
+    The proxy, then, sends an HTTPS request with appropriate authentication headers to the API server. This is the easiest way to connect 
+    to the API server. 
+    
+4.  See also [Access Clusters Using the Kubernetes API](https://kubernetes.io/docs/tasks/administer-cluster/access-cluster-api/) 
+
