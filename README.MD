@@ -1,7 +1,7 @@
 
-# Accounts Microservice
+# Quotes Microservice
 
-The APIs to the accounts business operations
+The APIs to the quotes business operations
 
 
 ## Monolithic Architecture
@@ -43,19 +43,19 @@ This README shows how to put Quotes into a Docker Image and how to deploy that D
 
 Maven must be able to authenticate to your DockerHub account so it can push Docker images
 
-1.  In `daytrader-accounts/pom.xml` change the ${user.name} to your DockerHub user name:
+1.  In `daytrader-quotes/pom.xml` change the ${user.name} to your DockerHub user name:
 
     ```xml
     <docker.image.prefix>${user.name}</docker.image.prefix>
     ``` 
 
-2.  In `daytrader-accounts/env/external/k8s/accounts-deployment.yaml`, change the image to your DockerHub username
+2.  In `daytrader-quotes/env/external/k8s/quotes-deployment.yaml`, change the image to your DockerHub username
 
     ```yaml
-    image: YOUR_DOCKERHUB_USERNAME/daytrader-accounts:4.0.18
+    image: YOUR_DOCKERHUB_USERNAME/daytrader-quotes:4.0.18
     ```
 
-3.  In `daytrader-accounts/pom.xml`, you don't have to change the <tag>, but if you do, change the above version too.
+3.  In `daytrader-quotes/pom.xml`, you don't have to change the <tag>, but if you do, change the above version too.
         
     ```xml
     <tag>4.0.18</tag>
@@ -117,18 +117,18 @@ ENV DAYTRADER_TRUSTSTORE_LOCATION=/var/ssl/daytrader/truststore.jks
 ENV DAYTRADER_TRUSTSTORE_PASSWORD=password
 # Set app variables
 ENV DAYTRADER_APP_VERSION=4.0.0
-ENV DAYTRADER_APP_ARTIFACTID=daytrader-accountsapp
-ENV DAYTRADER_WAR_ARTIFACTID=daytrader-accounts
+ENV DAYTRADER_APP_ARTIFACTID=daytrader-quotesapp
+ENV DAYTRADER_WAR_ARTIFACTID=daytrader-quotes
 # Set database variables
 ENV DAYTRADER_DATABASE_DRIVER=org.apache.derby.jdbc.EmbeddedDriver
 ENV DAYTRADER_DATABASE_URL='jdbc:derby:tradesdb;create=true'
 ENV DAYTRADER_DATABASE_USERNAME=xxx
 ENV DAYTRADER_DATABASE_PASSWORD=xxx
 # Set tomcat variables
-ENV SERVER_PORT=1443
-ENV SERVER_PORT_HTTPS=1443
+ENV SERVER_PORT=4443
+ENV SERVER_PORT_HTTPS=4443
 # Make port visible
-EXPOSE 1443
+EXPOSE 4443
 # Set service routes
 ENV DAYTRADER_ACCOUNTS_SERVICE=https://daytrader-accounts
 ENV DAYTRADER_GATEWAY_SERVICE=https://daytrader-gateway
@@ -158,7 +158,7 @@ ENTRYPOINT exec java $JAVA_OPTS -jar app.war
 
 ### Add Dockerfile Maven Plugin
 
-In `daytrader-accountsapp/daytrader-accounts/pom.xml`, add the [Dockerfile Maven Plugin](https://github.com/spotify/dockerfile-maven) and specify the DockerHub account. 
+In `daytrader-quotesapp/daytrader-quotes/pom.xml`, add the [Dockerfile Maven Plugin](https://github.com/spotify/dockerfile-maven) and specify the DockerHub account. 
         
 ```xml
 <plugin>
@@ -189,7 +189,7 @@ In `daytrader-accountsapp/daytrader-accounts/pom.xml`, add the [Dockerfile Maven
 
 With the `Dockerfile` and the `Dockerfile Maven Plugin` in place, we can use Maven to build and push the Docker image to DockerHub.
 
-1.  `$ cd daytrader-accountsapp`
+1.  `$ cd daytrader-quotesapp`
 
 2.  `$ mvn -Pcd clean install`
 
@@ -202,13 +202,11 @@ Deployment to Kubernetes required a number of manual steps. Some of these steps 
 
 **Notes** 
 
-1.  All configuration files are located in this folder: `$ cd daytrader-accountsapp/daytrader-accounts/env/external/k8s`
+1.  All configuration files are located in this folder: `daytrader-quotesapp/daytrader-quotes/env/external/k8s`
 
-2.  All configuration files were completely portable across the Kubernetes platforms that we tested.
+2.  All configuration files and `kubectl` commands were 100% portable across the Kubernetes platforms we tested.
 
-3.  All `kubectl` commands were also completely portable across the Kubernetes platforms that we tested. 
-
-This means you write configuration files once and run them on any platform. This is great news for DevOps!
+    This means you can write configuration files once and run them on any platform. This is great news for DevOps!
 
 ### Create the Deployment for our Docker Image
 
@@ -221,31 +219,31 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: daytrader-accounts
-  name: daytrader-accounts
+    app: daytrader-quotes
+  name: daytrader-quotes
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: daytrader-accounts
+      app: daytrader-quotes
   template:
     metadata:
       labels:
-        app: daytrader-accounts
+        app: daytrader-quotes
     spec:
       containers:
-      - name: daytrader-accounts
-        image: dhvines/daytrader-accounts:4.0.18
+      - name: daytrader-quotes
+        image: dhvines/daytrader-quotes:4.0.18
         imagePullPolicy: Always
         ports:
-        - containerPort: 1443
+        - containerPort: 4443
           protocol: TCP
         readinessProbe:  
           httpGet:
             path: /health
             scheme: HTTPS
-            port: 1443
+            port: 4443
           initialDelaySeconds: 30
           periodSeconds: 30
           timeoutSeconds: 10
@@ -253,7 +251,7 @@ spec:
           httpGet:
             path: /health
             scheme: HTTPS
-            port: 1443
+            port: 4443
           initialDelaySeconds: 30
           periodSeconds: 30
           timeoutSeconds: 10
@@ -280,23 +278,23 @@ spec:
     
     NAME | READY | STATUS | RESTARTS | AGE
     ---- | ----- | ------ | -------- | ---
-    daytrader-accounts-xxxxxxxxx-xxxxx | 1/1 | Running | 0 | 6m
+    daytrader-quotes-xxxxxxxxx-xxxxx | 1/1 | Running | 0 | 6m
     
     Wait until you see READY `1/1` and STATUS `Running`
               
 3.  Review the pods (application) logs
         
-    `$ kubectl logs daytrader-accounts-xxxxxxxxx-xxxxx -f`
+    `$ kubectl logs daytrader-quotes-xxxxxxxxx-xxxxx -f`
     
-    You should see `Tomcat started on port(s): 1443 (https)`
+    You should see `Tomcat started on port(s): 4443 (https)`
     
 #### Use `kubectl port-forward` to test the connection
         
-1.  `$ kubectl port-forward daytrader-accounts-xxxxxxxxx-xxxxx 8888:1443`
+1.  `$ kubectl port-forward daytrader-quotes-xxxxxxxxx-xxxxx 8888:4443`
     
-    This command forwards local port 8888 to port 1443 of your pod
+    This command forwards local port 8888 to port 4443 of your pod
        
-    You should see `Forwarding from 127.0.0.1:8888 -> 1443`
+    You should see `Forwarding from 127.0.0.1:8888 -> 4443`
        
 2.  `$ curl -k https://127.0.0.1:8888/health`
 
@@ -317,16 +315,16 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
-    app: daytrader-accounts
-  name: daytrader-accounts
+    app: daytrader-quotes
+  name: daytrader-quotes
   namespace: default
 spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 1443
+    targetPort: 4443
   selector:
-    app: daytrader-accounts
+    app: daytrader-quotes
   sessionAffinity: None
   type: ClusterIP
 ```
@@ -339,7 +337,7 @@ spec:
         
     NAME | TYPE | CLUSTER-IP | EXTERNAL-IP | PORT(S) | AGE
     ---- | ---- | ---------- | ----------- | ------- | ---
-    daytrader-accounts | ClusterIP | 10.100.17.24 | <none> | 443/TCP | 38s
+    daytrader-quotes | ClusterIP | 10.100.17.24 | <none> | 443/TCP | 38s
        
     The above command creates a service resource. This resource listens on the CLUSTER IP and PORT. It is backed by endpoints 
     to one or more pods. You can see the enpoints buy doing `kubectl get endpoints`. When the service receives an HTTPS request,
