@@ -273,7 +273,7 @@ public class QuotesService
 			         		StringWriter sw = new StringWriter();
 			         		ex.printStackTrace(new PrintWriter(sw));
 			         		String exceptionAsString = sw.toString();
-			        		Log.debug("QuotesService:recreateDBTables() - Ignored exception dropping a table: \n" + exceptionAsString);
+			        		// Ignore exception; table may not exist
 	   					}
 	   					else
 	   						throw ex;
