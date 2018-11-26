@@ -66,6 +66,7 @@
 	</dependencies>
 	<build>
 		<plugins>
+		
 			<!-- Set JDK compiler version  -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -75,6 +76,7 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
+			
 			<!-- Workaround: Spring Boot fails to run maven-surefire-plugin -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -82,7 +84,7 @@
                 <configuration>
                     <useSystemClassLoader>false</useSystemClassLoader>
                 </configuration>
-            </plugin>			
+            </plugin>
 		</plugins>
 	</build>
 
