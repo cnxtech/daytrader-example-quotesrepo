@@ -20,7 +20,7 @@ kubectl delete services daytrader-quotes
 # Stop the kubectl proxy
 #
 kill -9 $(pgrep -f "create_service.sh")
-kill -9 $(pgrep -f "kubectl proxy")
+kill -9 $(pgrep -f "kubectl proxy") 
 
 echo "end of delete_service.sh"
 #

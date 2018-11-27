@@ -49,4 +49,4 @@ spec:
         - name: QUOTES_SERVICE_ROUTE
           value: https://daytrader-quotes
         - name: GET_HOSTS_FROM
-          value: dns  
+          value: dns

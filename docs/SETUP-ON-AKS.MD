@@ -66,7 +66,7 @@
 
 1.  Create the namespace and configmaps; otherwise cloud-generic.yaml and ingress controller will have errors
         
-    a.  `$ cd daytrader-webapp/daytrader-web/env/external/k8s`
+    a.  `$ cd daytrader-webapp/daytrader-quotes/env/external/kubernetes/conf`
             
     b.  `$ kubectl apply -f ingress-nginx-namespace.yaml`
     

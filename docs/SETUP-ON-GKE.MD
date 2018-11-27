@@ -57,7 +57,7 @@ At this point you should have a cluster and `~/.kube/config` file created. That 
 
      
     a.  `$ kubectl config use-context daytrader-gke-cluster`
-                    
+
     You should see `Switched to context daytrader-gke-cluster`
 
     b.  `$ kubectl get nodes`
@@ -80,7 +80,7 @@ At this point you should have a cluster and `~/.kube/config` file created. That 
 
 2.  Create tha namespace; otherwise cloud-generic.yaml will have errors
         
-    a.  `$ cd daytrader-webapp/daytrader-web/env/external/k8s`
+    a.  `$ cd daytrader-webapp/daytrader-quotes/env/external/kubernetes/conf`
             
     b.  `$ kubectl apply -f ingress-nginx-namespace.yaml`
     
